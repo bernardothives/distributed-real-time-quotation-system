@@ -36,25 +36,40 @@ func (b *Broker) Unsubscribe(topic string, conn net.Conn) {
 
 	for i, c := range subscribers {
 		if c == conn {
+			// Safe removal preserving order (optional) or fast removal
 			b.subscribers[topic] = append(subscribers[:i], subscribers[i+1:]...)
+			fmt.Printf("Removed subscriber from topic: %s\n", topic)
+			// Close connection to be sure
+			conn.Close()
 			return
 		}
 	}
 }
 
 func (b *Broker) Publish(topic string, msg protocol.Message) {
+	// Critical: Copy the slice to avoid holding RLock during IO or Data Races
+	// if Unsubscribe changes the underlying array while we iterate.
 	b.mu.RLock()
-	defer b.mu.RUnlock()
+	originalConns := b.subscribers[topic]
+	conns := make([]net.Conn, len(originalConns))
+	copy(conns, originalConns)
+	b.mu.RUnlock()
 
-	conns := b.subscribers[topic]
+	if len(conns) == 0 {
+		return
+	}
+
+	fmt.Printf("Broadcasting to %d subscribers on topic %s\n", len(conns), topic)
+
 	for _, conn := range conns {
 		go func(c net.Conn) {
+			// Check for error on send
 			if err := protocol.SendJSON(c, msg); err != nil {
+				fmt.Printf("Error sending to subscriber: %v. Removing.\n", err)
 				b.Unsubscribe(topic, c)
 			}
 		}(conn)
 	}
-	fmt.Printf("Published message to %d subscribers on topic %s\n", len(conns), topic)
 }
 
 func main() {
@@ -77,15 +92,16 @@ func main() {
 }
 
 func handleClient(conn net.Conn, broker *Broker) {
-	// Not deferring close here immediately, depends on logic, but usually yes.
-	// However, for subscribers, we want to keep connection open.
-	// If read fails, we close.
+	// Only close at the very end of the session
 	defer conn.Close()
 
 	for {
 		var msg protocol.Message
 		if err := protocol.ReceiveJSON(conn, &msg); err != nil {
-			return
+			// If we can't read, the client is gone.
+			// Note: Ideally we should cleanup subscriptions here too if they subscribed,
+			// but for this simple architecture, the Write failure in Publish will clean it up eventually.
+			return 
 		}
 
 		switch msg.Type {

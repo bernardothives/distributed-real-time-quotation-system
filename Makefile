@@ -21,14 +21,13 @@ run-all: build
 	@echo "All services started."
 
 stop-all:
-	@echo "Stopping all services..."
-	@kill -9 `cat external.pid` && rm external.pid
-	@kill -9 `cat broker.pid` && rm broker.pid
-	@kill -9 `cat core.pid` && rm core.pid
-	@kill -9 `cat shard1.pid` && rm shard1.pid
-	@kill -9 `cat shard2.pid` && rm shard2.pid
-	@kill -9 `cat shard3.pid` && rm shard3.pid
-	@kill -9 `cat aggregator.pid` && rm aggregator.pid
+	@echo "Stopping all services (Kill by Name)..."
+	@-pkill -f bin/external || true
+	@-pkill -f bin/broker || true
+	@-pkill -f bin/core || true
+	@-pkill -f bin/shard || true
+	@-pkill -f bin/aggregator || true
+	@rm *.pid 2>/dev/null || true
 	@echo "All services stopped."
 
 test-aggregator:

@@ -22,14 +22,14 @@ run-all: build
 
 stop-all:
 	@echo "Stopping all services..."
-	@kill `cat external.pid` || true
-	@kill `cat broker.pid` || true
-	@kill `cat core.pid` || true
-	@kill `cat shard1.pid` || true
-	@kill `cat shard2.pid` || true
-	@kill `cat shard3.pid` || true
-	@kill `cat aggregator.pid` || true
-	@rm *.pid
+	@kill -9 `cat external.pid` && rm external.pid
+	@kill -9 `cat broker.pid` && rm broker.pid
+	@kill -9 `cat core.pid` && rm core.pid
+	@kill -9 `cat shard1.pid` && rm shard1.pid
+	@kill -9 `cat shard2.pid` && rm shard2.pid
+	@kill -9 `cat shard3.pid` && rm shard3.pid
+	@kill -9 `cat aggregator.pid` && rm aggregator.pid
+	@echo "All services stopped."
 
 test-aggregator:
 	@./bin/client -mode=aggregator

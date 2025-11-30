@@ -2,7 +2,6 @@
 
 **Disciplina:** INE5645 - Programação Paralela e Distribuída  
 **Linguagem:** Go (Golang) 1.21+  
-**Relatório Técnico:** Veja [RELATORIO.md](RELATORIO.md) para detalhes arquiteturais e justificativas teóricas.
 
 ---
 
@@ -31,33 +30,27 @@ A infraestrutura é composta por 7 processos distintos comunicando-se via TCP/JS
 *   **Make** (para automação de build)
 *   Sistema Operacional Linux ou macOS (devido ao uso de sinais de processo no Makefile)
 
-### 1. Compilação
-Compila todos os microsserviços e gera os binários na pasta `bin/`.
-```bash
-make build
-```
-
-### 2. Inicialização (Infraestrutura)
-Inicia todos os serviços em background (`&`), salvando os PIDs para encerramento posterior.
+### 1. Inicialização (Infraestrutura)
+Compila todos os microsserviços, gera os binários na pasta `bin/` e inicia todos os serviços em background (`&`), salvando os PIDs para encerramento posterior.
 ```bash
 make run-all
 ```
 > *Aguarde mensagem "All services started."*
 
-### 3. Teste: Pub/Sub (Tempo Real)
+### 2. Teste: Pub/Sub (Tempo Real)
 Inicia um cliente que se subscreve no Broker. Você verá atualizações de preço chegando via "push" assim que o Core processar cotações.
 ```bash
 make test-sub
 ```
 *(Pressione Ctrl+C para sair)*
 
-### 4. Teste: Scatter/Gather (Relatório Agregado)
+### 3. Teste: Scatter/Gather (Relatório Agregado)
 Solicita um relatório completo. O Aggregator buscará o preço atual no Core e o histórico nos 3 Shards simultaneamente.
 ```bash
 make test-aggregator
 ```
 
-### 5. Parar o Sistema
+### 4. Parar o Sistema
 Encerra todos os processos (kill) e remove arquivos temporários (`.pid`).
 ```bash
 make stop-all

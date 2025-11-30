@@ -46,6 +46,7 @@ A implantação é automatizada via `Makefile`, que configura a topologia da red
 
 ### Pré-requisitos
 - Go 1.20+ instalado.
+- GNU Make instalado (geralmente presente via build-essential no Linux ou Xcode Command Line Tools no Mac).
 - Ambiente Linux/Mac (recomendado para uso do Makefile).
 
 ### Passo a Passo

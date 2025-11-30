@@ -17,11 +17,11 @@ const (
 	CoreServicePort     = ":8082"
 )
 
-// BrokerClient manages the connection to the Pub/Sub Broker safely.
+// BrokerClient gerencia a conexão com o Broker Pub/Sub de forma segura.
 type BrokerClient struct {
 	addr string
 	conn net.Conn
-	mu   sync.Mutex // Protects connection access (Atomic Writes & Reconnection)
+	mu   sync.Mutex // Protege o acesso à conexão (Escritas Atômicas & Reconexão)
 }
 
 func NewBrokerClient(addr string) *BrokerClient {
@@ -30,43 +30,43 @@ func NewBrokerClient(addr string) *BrokerClient {
 	}
 }
 
-// Publish sends a message to the broker with automatic reconnection logic.
+// Publish envia uma mensagem para o broker com lógica de reconexão automática.
 func (bc *BrokerClient) Publish(topic string, payload []byte) error {
 	bc.mu.Lock()
 	defer bc.mu.Unlock()
 
-	// 1. Ensure Connection
+	// 1. Garantir Conexão
 	if bc.conn == nil {
 		if err := bc.connect(); err != nil {
 			return fmt.Errorf("broker offline: %v", err)
 		}
 	}
 
-	// 2. Prepare Message inside the lock to ensure sequence
+	// 2. Preparar Mensagem dentro do bloqueio para garantir sequência
 	msg := protocol.Message{
 		Type:    protocol.MsgPublish,
 		Topic:   topic,
 		Payload: payload,
 	}
 
-	// 3. Attempt Send
+	// 3. Tentar Enviar
 	err := protocol.SendJSON(bc.conn, msg)
 	if err != nil {
 		fmt.Printf("[Core] Error publishing to broker: %v. Attempting reconnection...\n", err)
 		
-		// 4. Reconnection Logic (On Error)
+		// 4. Lógica de Reconexão (Em caso de Erro)
 		bc.conn.Close()
-		bc.conn = nil // Force full reconnect next time or now
+		bc.conn = nil // Forçar reconexão completa na próxima vez ou agora
 
-		// Try to reconnect immediately once
+		// Tentar reconectar imediatamente uma vez
 		if reconErr := bc.connect(); reconErr != nil {
 			return fmt.Errorf("reconnection failed: %v", reconErr)
 		}
 
-		// Retry Send
+		// Tentar Enviar Novamente
 		fmt.Println("[Core] Reconnected to Broker. Retrying publish...")
 		if err := protocol.SendJSON(bc.conn, msg); err != nil {
-			// If fails again, give up for this request to avoid blocking too long
+			// Se falhar novamente, desistir desta requisição para evitar bloqueio muito longo
 			bc.conn.Close()
 			bc.conn = nil
 			return fmt.Errorf("retry failed: %v", err)
@@ -86,19 +86,19 @@ func (bc *BrokerClient) connect() error {
 }
 
 func main() {
-	// Initialize Circuit Breaker
+	// Inicializar Circuit Breaker
 	cb := circuitbreaker.NewCircuitBreaker(3, 5*time.Second)
 	
-	// Initialize Robust Broker Client
+	// Inicializar Cliente Broker Robusto
 	brokerClient := NewBrokerClient(BrokerServiceAddr)
-	// Attempt initial connection (optional, allows fail-fast check)
+	// Tentar conexão inicial (opcional, permite verificação rápida de falha)
 	go func() {
 		if err := brokerClient.Publish("healthcheck", []byte{}); err != nil {
 			fmt.Println("[Core] Initial broker check failed (will retry on demand):", err)
 		}
 	}()
 
-	// Server for Aggregator
+	// Servidor para o Agregador
 	listener, err := net.Listen("tcp", CoreServicePort)
 	if err != nil {
 		panic(err)
@@ -123,7 +123,7 @@ func handleRequest(clientConn net.Conn, cb *circuitbreaker.CircuitBreaker, broke
 	}
 
 	if msg.Type == protocol.MsgRequestQuote {
-		// Use Circuit Breaker to fetch from External
+		// Usar Circuit Breaker para buscar do Externo
 		result, err := cb.Execute(func() (interface{}, error) {
 			return fetchQuoteFromExternal()
 		})
@@ -136,16 +136,16 @@ func handleRequest(clientConn net.Conn, cb *circuitbreaker.CircuitBreaker, broke
 
 		quote := result.(model.Quote)
 		
-		// 1. Return to Client (Aggregator)
+		// 1. Retornar ao Cliente (Agregador)
 		respPayload, _ := json.Marshal(quote)
 		resp := protocol.Message{Type: protocol.MsgRespQuote, Payload: respPayload}
 		protocol.SendJSON(clientConn, resp)
 
-		// 2. Publish to Broker (Robust & Async-ish)
-		// We do this synchronously here to ensure order, but since we use a timeout in connect, it won't hang forever.
+		// 2. Publicar no Broker (Robusto & Quase Assíncrono)
+		// Fazemos isso de forma síncrona aqui para garantir a ordem, mas como usamos um timeout na conexão, não ficará travado para sempre.
 		err = broker.Publish(quote.Symbol, respPayload)
 		if err != nil {
-			// Log only, do not fail the client request because pub/sub is auxiliary
+			// Apenas logar, não falhar a requisição do cliente pois o pub/sub é auxiliar
 			fmt.Println("[Core] Warning: Failed to publish quote:", err)
 		} else {
 			fmt.Printf("[Core] Published %s to Broker\n", quote.Symbol)

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// Configuration
+// Configuração
 var shards = []string{"localhost:9001", "localhost:9002", "localhost:9003"}
 const coreAddr = "localhost:8082"
 
@@ -46,7 +46,7 @@ func handleClient(conn net.Conn) {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
-	// 1. Scatter: Core Service (Current Price)
+	// 1. Scatter: Serviço Core (Preço Atual)
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -60,7 +60,7 @@ func handleClient(conn net.Conn) {
 		mu.Unlock()
 	}()
 
-	// 2. Scatter: History Shards
+	// 2. Scatter: Shards de Histórico
 	for _, shardAddr := range shards {
 		wg.Add(1)
 		go func(addr string) {
@@ -76,12 +76,12 @@ func handleClient(conn net.Conn) {
 		}(shardAddr)
 	}
 
-	// 3. Gather: Wait for all
+	// 3. Gather: Aguardar todos
 	wg.Wait()
 	
 	fmt.Printf("Scatter/Gather finished in %v\n", time.Since(start))
 
-	// Send back to client
+	// Enviar de volta ao cliente
 	json.NewEncoder(conn).Encode(resp)
 }
 

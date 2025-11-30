@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-// Message Types
+// Tipos de Mensagem
 const (
 	MsgSubscribe    = "SUBSCRIBE"
 	MsgPublish      = "PUBLISH"
@@ -18,7 +18,7 @@ const (
 
 type Message struct {
 	Type    string          `json:"type"`
-	Topic   string          `json:"topic,omitempty"`   // Used for Pub/Sub
+	Topic   string          `json:"topic,omitempty"`   // Usado para Pub/Sub
 	Payload json.RawMessage `json:"payload,omitempty"`
 }
 

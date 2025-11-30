@@ -40,17 +40,17 @@ func handleConnection(conn net.Conn) {
 		}
 
 		if msg.Type == protocol.MsgRequestQuote {
-			// Simulate Chaos (Failure or Delay)
+			// Simular Caos (Falha ou Atraso)
 			chaos := r.Float64()
-			if chaos < 0.2 { // 20% chance of timeout/error
+			if chaos < 0.2 { // 20% de chance de timeout/erro
 				fmt.Println("Simulating failure...")
-				// Simply closing connection or sending garbage simulates network trouble
+				// Simplesmente fechar a conexão ou enviar lixo simula problemas de rede
 				return 
-			} else if chaos < 0.4 { // 20% delay
+			} else if chaos < 0.4 { // 20% de atraso
 				time.Sleep(2 * time.Second)
 			}
 
-			// Success Response
+			// Resposta de Sucesso
 			quote := model.Quote{
 				Symbol:    "PETR4",
 				Price:     20.0 + r.Float64()*10,

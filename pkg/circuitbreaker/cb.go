@@ -35,7 +35,7 @@ func NewCircuitBreaker(threshold int, timeout time.Duration) *CircuitBreaker {
 func (cb *CircuitBreaker) Execute(action func() (interface{}, error)) (interface{}, error) {
 	cb.mu.Lock()
 
-	// Check State
+	// Verificar Estado
 	if cb.state == StateOpen {
 		if time.Since(cb.lastFailure) > cb.resetTimeout {
 			fmt.Println("[CB] Circuit transitioning to HALF-OPEN")
@@ -47,7 +47,7 @@ func (cb *CircuitBreaker) Execute(action func() (interface{}, error)) (interface
 	}
 	cb.mu.Unlock()
 
-	// Execute Action
+	// Executar Ação
 	result, err := action()
 
 	cb.mu.Lock()
@@ -64,7 +64,7 @@ func (cb *CircuitBreaker) Execute(action func() (interface{}, error)) (interface
 		return nil, err
 	}
 
-	// Success
+	// Sucesso
 	if cb.state == StateHalfOpen {
 		fmt.Println("[CB] Success in Half-Open. Circuit CLOSED.")
 		cb.state = StateClosed

@@ -15,13 +15,13 @@ var (
 	id   = flag.String("id", "Shard-A", "Shard ID")
 )
 
-// In-memory DB
+// BD em memória
 var db []model.Transaction
 
 func main() {
 	flag.Parse()
 
-	// Populate with dummy data
+	// Popular com dados fictícios
 	populateDB()
 
 	listener, err := net.Listen("tcp", ":"+*port)
@@ -40,9 +40,9 @@ func main() {
 }
 
 func populateDB() {
-	// Add dummy transactions
-	// In a real scenario, Shards would own specific keys. 
-	// Here we just add data tagged with this Shard ID for demo.
+	// Adicionar transações fictícias
+	// Em um cenário real, Shards possuiriam chaves específicas.
+	// Aqui apenas adicionamos dados marcados com este ID de Shard para demonstração.
 	for i := 0; i < 10; i++ {
 		db = append(db, model.Transaction{
 			ID:        fmt.Sprintf("%s-%d", *id, i),
@@ -63,7 +63,7 @@ func handleRequest(conn net.Conn) {
 	}
 
 	if msg.Type == protocol.MsgReqHistory {
-		// Return all data (Simulate Query)
+		// Retornar todos os dados (Simular Consulta)
 		payload, _ := json.Marshal(db)
 		resp := protocol.Message{
 			Type:    protocol.MsgRespHistory,

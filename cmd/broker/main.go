@@ -36,10 +36,10 @@ func (b *Broker) Unsubscribe(topic string, conn net.Conn) {
 
 	for i, c := range subscribers {
 		if c == conn {
-			// Safe removal preserving order (optional) or fast removal
+			// Remoção segura preservando a ordem (opcional) ou remoção rápida
 			b.subscribers[topic] = append(subscribers[:i], subscribers[i+1:]...)
 			fmt.Printf("Removed subscriber from topic: %s\n", topic)
-			// Close connection to be sure
+			// Fechar conexão para garantir
 			conn.Close()
 			return
 		}
@@ -47,8 +47,8 @@ func (b *Broker) Unsubscribe(topic string, conn net.Conn) {
 }
 
 func (b *Broker) Publish(topic string, msg protocol.Message) {
-	// Critical: Copy the slice to avoid holding RLock during IO or Data Races
-	// if Unsubscribe changes the underlying array while we iterate.
+	// Crítico: Copiar o slice para evitar segurar RLock durante IO ou Corridas de Dados
+	// se o Unsubscribe alterar o array subjacente enquanto iteramos.
 	b.mu.RLock()
 	originalConns := b.subscribers[topic]
 	conns := make([]net.Conn, len(originalConns))
@@ -63,7 +63,7 @@ func (b *Broker) Publish(topic string, msg protocol.Message) {
 
 	for _, conn := range conns {
 		go func(c net.Conn) {
-			// Check for error on send
+			// Verificar erro no envio
 			if err := protocol.SendJSON(c, msg); err != nil {
 				fmt.Printf("Error sending to subscriber: %v. Removing.\n", err)
 				b.Unsubscribe(topic, c)
@@ -92,15 +92,15 @@ func main() {
 }
 
 func handleClient(conn net.Conn, broker *Broker) {
-	// Only close at the very end of the session
+	// Fechar apenas no final da sessão
 	defer conn.Close()
 
 	for {
 		var msg protocol.Message
 		if err := protocol.ReceiveJSON(conn, &msg); err != nil {
-			// If we can't read, the client is gone.
-			// Note: Ideally we should cleanup subscriptions here too if they subscribed,
-			// but for this simple architecture, the Write failure in Publish will clean it up eventually.
+			// Se não conseguirmos ler, o cliente se foi.
+			// Nota: Idealmente deveríamos limpar as inscrições aqui também se eles se inscreveram,
+			// mas para esta arquitetura simples, a falha de Escrita no Publish limpará eventualmente.
 			return 
 		}
 

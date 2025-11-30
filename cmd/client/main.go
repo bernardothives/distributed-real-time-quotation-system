@@ -27,14 +27,14 @@ func runAggregatorClient() {
 	defer conn.Close()
 
 	fmt.Println("Requesting Aggregated Data...")
-	// Just connecting triggers the handler in Aggregator (simple trigger)
-	// Or we can send a dummy byte if read blocks.
-	// Aggregator expects connection, then handles immediately. Wait, Aggregator reads?
-	// In my impl: Aggregator accepts, then handleClient runs. handleClient sends response.
-	// It does NOT wait for input. So just connecting is enough.
+	// Apenas conectar aciona o handler no Agregador (gatilho simples)
+	// Ou podemos enviar um byte fictício se a leitura bloquear.
+	// O Agregador espera a conexão, depois trata imediatamente. Espera, o Agregador lê?
+	// Na minha impl: Agregador aceita, então handleClient roda. handleClient envia resposta.
+	// Ele NÃO espera entrada. Então apenas conectar é suficiente.
 
 	decoder := json.NewDecoder(conn)
-	var resp map[string]interface{} // Generic map to print pretty
+	var resp map[string]interface{} // Mapa genérico para imprimir bonito
 	if err := decoder.Decode(&resp); err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func runSubscriber() {
 	}
 	defer conn.Close()
 
-	// Subscribe
+	// Inscrever-se
 	subMsg := protocol.NewMessage(protocol.MsgSubscribe, nil)
 	subMsg.Topic = "PETR4"
 	protocol.SendJSON(conn, subMsg)

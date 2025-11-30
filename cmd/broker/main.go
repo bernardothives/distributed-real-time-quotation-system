@@ -25,14 +25,34 @@ func (b *Broker) Subscribe(topic string, conn net.Conn) {
 	fmt.Printf("New subscriber for topic: %s\n", topic)
 }
 
+func (b *Broker) Unsubscribe(topic string, conn net.Conn) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	subscribers, ok := b.subscribers[topic]
+	if !ok {
+		return
+	}
+
+	for i, c := range subscribers {
+		if c == conn {
+			b.subscribers[topic] = append(subscribers[:i], subscribers[i+1:]...)
+			return
+		}
+	}
+}
+
 func (b *Broker) Publish(topic string, msg protocol.Message) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
 	conns := b.subscribers[topic]
 	for _, conn := range conns {
-		// In a real system, we would handle slow consumers/disconnects here
-		go protocol.SendJSON(conn, msg)
+		go func(c net.Conn) {
+			if err := protocol.SendJSON(c, msg); err != nil {
+				b.Unsubscribe(topic, c)
+			}
+		}(conn)
 	}
 	fmt.Printf("Published message to %d subscribers on topic %s\n", len(conns), topic)
 }

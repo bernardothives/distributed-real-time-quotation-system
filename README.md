@@ -24,32 +24,62 @@
 **Solução:** O `AggregatorService` dispara goroutines em paralelo para todas as fontes.
 **Benefício na Solução:** A latência final da requisição é determinada pela resposta *mais lenta* do conjunto, e não pela soma de todas (`max(T_a, T_b...)`). Usamos `sync.WaitGroup` para sincronizar o "Gather" (união dos resultados) antes de devolver o JSON ao cliente.
 
-## 2. Como Executar
+---
+
+## 2. Configuração e Implantação (Topologia)
+
+A implantação é automatizada via `Makefile`, que configura a topologia da rede local definindo as portas e flags de cada microsserviço conforme abaixo:
+
+| Serviço | Porta | Configuração (Flags) | Descrição |
+|---------|-------|----------------------|-----------|
+| **External** | `:8080` | N/A | Mock da Bolsa de Valores. |
+| **Broker** | `:8081` | N/A | Gerenciador de Pub/Sub. |
+| **Core** | `:8082` | N/A | Conecta-se autom. ao Broker e External. |
+| **Shard A** | `:9001` | `-port 9001 -id Shard-A` | Réplica 1 do Histórico. |
+| **Shard B** | `:9002` | `-port 9002 -id Shard-B` | Réplica 2 do Histórico. |
+| **Shard C** | `:9003` | `-port 9003 -id Shard-C` | Réplica 3 do Histórico. |
+| **Aggregator**| `:8000` | N/A | Gateway para o cliente. |
+
+---
+
+## 3. Como Executar
 
 ### Pré-requisitos
 - Go 1.20+ instalado.
-- Ambiente Linux/Mac (para uso do Makefile e sinais de sistema).
+- Ambiente Linux/Mac (recomendado para uso do Makefile).
 
 ### Passo a Passo
-1. **Compilar e Iniciar Infraestrutura:**
-   Isso iniciará 7 processos: External, Broker, Core, 3x Shards e Aggregator.
-   ```bash
-   make run-all
-   ```
 
-2. **Testar Cliente (Subscriber):**
-   Em outro terminal, abra um assinante que ficará ouvindo atualizações em tempo real.
-   ```bash
-   make test-sub
-   ```
+#### 1. Compilação
+Para gerar os binários de todos os serviços na pasta `bin/`:
+```bash
+make build
+```
 
-3. **Testar Cliente (Aggregator/Relatório):**
-   Em um terceiro terminal, peça o relatório completo. Isso disparará o Scatter/Gather e forçará o Core a buscar cotação no External (podendo ativar o Circuit Breaker se houver falha simulada).
-   ```bash
-   make test-aggregator
-   ```
+#### 2. Executar Infraestrutura (Implantação)
+Este comando inicia os 7 processos da topologia (External, Broker, Core, 3x Shards e Aggregator) em background:
 
-4. **Parar Tudo:**
-   ```bash
-   make stop-all
-   ```
+```Bash
+make run-all
+```
+
+#### 3. Testar Cliente (Subscriber - Pub/Sub)
+Em outro terminal, execute o assinante. Ele se conectará ao Broker e ficará ouvindo atualizações de preços em tempo real (push):
+
+```Bash
+make test-sub
+```
+
+#### 4. Testar Cliente (Aggregator - Scatter/Gather)
+Em um terceiro terminal, solicite o relatório completo. Isso disparará o Scatter/Gather, buscando dados no Core e nos 3 Shards simultaneamente:
+
+```Bash
+make test-aggregator
+```
+
+#### 5. Parar Aplicação
+Para encerrar todos os processos e liberar as portas:
+
+```Bash
+make stop-all
+```

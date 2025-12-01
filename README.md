@@ -111,7 +111,3 @@ make test
 ├── Makefile             # Automação de build e testes
 └── README.md            # Documentação
 ```
-
----
-**Autor:** Bernardo Thives
-**Curso:** Engenharia de Software - Sistemas Distribuídos

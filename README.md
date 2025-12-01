@@ -42,7 +42,6 @@ Inicia um cliente que se subscreve no Broker. Você verá atualizações de pre�
 ```bash
 make test-sub
 ```
-*(Pressione Ctrl+C para sair)*
 
 ### 3. Teste: Scatter/Gather (Relatório Agregado)
 Solicita um relatório completo. O Aggregator buscará o preço atual no Core e o histórico nos 3 Shards simultaneamente.

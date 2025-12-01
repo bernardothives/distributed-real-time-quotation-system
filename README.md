@@ -1,9 +1,4 @@
-# Distributed Real-Time Quotation System
-
-![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)
-![Architecture](https://img.shields.io/badge/Architecture-Microservices-green)
-![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
-![Coverage](https://img.shields.io/badge/Tests-Passing-brightgreen)
+# Sistema Distribuído de Cotações em Tempo Real
 
 Um sistema distribuído robusto simulando uma plataforma financeira de alta frequência. Este projeto demonstra a implementação "from scratch" (sem frameworks pesados) de padrões clássicos de design distribuído, focando em resiliência, escalabilidade e desacoplamento.
 
@@ -76,7 +71,7 @@ O projeto utiliza um `Makefile` para orquestrar os 7 processos distribuídos sim
 
 ---
 
-## Qualidade e Testes (Novidade)
+## Qualidade e Testes
 
 A robustez do sistema é garantida por uma suíte de testes automatizados cobrindo os componentes críticos.
 

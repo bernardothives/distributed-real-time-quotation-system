@@ -9,7 +9,7 @@ Um sistema distribuído robusto simulando uma plataforma financeira de alta freq
 
 ---
 
-## 🏗 Arquitetura e Padrões de Design
+## Arquitetura e Padrões de Design
 
 O sistema foi arquitetado para resolver problemas reais de engenharia de software distribuída:
 
@@ -39,7 +39,7 @@ O sistema foi arquitetado para resolver problemas reais de engenharia de softwar
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Pré-requisitos
 *   **Go** 1.20+
@@ -76,7 +76,7 @@ O projeto utiliza um `Makefile` para orquestrar os 7 processos distribuídos sim
 
 ---
 
-## 🛡️ Qualidade e Testes (Novidade)
+## Qualidade e Testes (Novidade)
 
 A robustez do sistema é garantida por uma suíte de testes automatizados cobrindo os componentes críticos.
 
@@ -92,7 +92,7 @@ make test
 
 ---
 
-## 📂 Estrutura do Projeto
+## Estrutura do Projeto
 
 ```plaintext
 /

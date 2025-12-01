@@ -8,25 +8,25 @@ Um sistema distribuído robusto simulando uma plataforma financeira de alta freq
 
 O sistema foi arquitetado para resolver problemas reais de engenharia de software distribuída:
 
-### 1. Circuit Breaker (Resiliência)
+### 1. Circuit Breaker
 *   **Problema:** O serviço `External` (Bolsa de Valores) simula instabilidade e latência.
 *   **Solução:** Implementação de uma máquina de estados (Closed, Open, Half-Open) no serviço `Core`.
 *   **Benefício:** Impede falhas em cascata e protege o sistema de exaustão de recursos quando dependências externas falham.
 *   **Localização:** `pkg/circuitbreaker`
 
-### 2. Publish/Subscribe (Desacoplamento)
+### 2. Publish/Subscribe
 *   **Problema:** Múltiplos clientes precisam de cotações em tempo real sem sobrecarregar o `Core`.
 *   **Solução:** Um `Broker` TCP dedicado gerencia tópicos e assinaturas. O `Core` publica uma vez (Fan-out).
 *   **Benefício:** O `Core` não conhece os consumidores finais; alta escalabilidade de leitura.
 *   **Localização:** `cmd/broker` e `pkg/protocol`
 
-### 3. Database Sharding (Escalabilidade)
+### 3. Database Sharding
 *   **Problema:** O volume de histórico de transações cresce indefinidamente.
 *   **Solução:** Particionamento horizontal dos dados em 3 nós (`Shard A`, `Shard B`, `Shard C`).
 *   **Benefício:** Distribuição de carga de I/O e armazenamento.
 *   **Localização:** `cmd/shard`
 
-### 4. Scatter/Gather (Agregação)
+### 4. Scatter/Gather
 *   **Problema:** Clientes precisam de um relatório unificado (Preço Atual + Histórico Completo) vindo de fontes distintas.
 *   **Solução:** O `Aggregator` dispara requisições paralelas para o `Core` e todos os `Shards`, aguardando (`Wait`) e combinando os resultados.
 *   **Benefício:** Redução latência total (limitada pelo serviço mais lento, não pela soma).

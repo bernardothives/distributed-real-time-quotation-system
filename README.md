@@ -34,8 +34,6 @@ O sistema foi arquitetado para resolver problemas reais de engenharia de softwar
 
 ---
 
-## Getting Started
-
 ### Pré-requisitos
 *   **Go** 1.20+
 *   **Make** (GNU Make)

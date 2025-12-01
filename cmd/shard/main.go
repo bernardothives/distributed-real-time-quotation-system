@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	port = flag.String("port", "9001", "Port to listen on")
-	id   = flag.String("id", "Shard-A", "Shard ID")
+	port  = flag.String("port", "9001", "Port to listen on")
+	id    = flag.String("id", "Shard-A", "Shard ID")
+	delay = flag.Int("delay", 100, "Artificial processing delay in ms (to demonstrate parallelism)")
 )
 
 // BD em memória
@@ -28,7 +29,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("History Shard %s running on :%s with %d records\n", *id, *port, len(db))
+	fmt.Printf("History Shard %s running on :%s with %d records (Delay: %dms)\n", *id, *port, len(db), *delay)
 
 	for {
 		conn, err := listener.Accept()
@@ -41,8 +42,6 @@ func main() {
 
 func populateDB() {
 	// Adicionar transações fictícias
-	// Em um cenário real, Shards possuiriam chaves específicas.
-	// Aqui apenas adicionamos dados marcados com este ID de Shard para demonstração.
 	for i := 0; i < 10; i++ {
 		db = append(db, model.Transaction{
 			ID:        fmt.Sprintf("%s-%d", *id, i),
@@ -63,13 +62,19 @@ func handleRequest(conn net.Conn) {
 	}
 
 	if msg.Type == protocol.MsgReqHistory {
+		// Simular processamento (I/O Bound ou CPU Bound) para evidenciar paralelismo
+		if *delay > 0 {
+			time.Sleep(time.Duration(*delay) * time.Millisecond)
+		}
+
 		// Retornar todos os dados (Simular Consulta)
-		payload, _ := json.Marshal(db)
+	
+payload, _ := json.Marshal(db)
 		resp := protocol.Message{
 			Type:    protocol.MsgRespHistory,
 			Payload: payload,
 		}
 		protocol.SendJSON(conn, resp)
-		fmt.Printf("[%s] Served history request\n", *id)
+		fmt.Printf("[%s] Served history request (latency: %dms)\n", *id, *delay)
 	}
 }

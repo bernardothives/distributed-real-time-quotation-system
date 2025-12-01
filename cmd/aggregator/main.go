@@ -12,7 +12,10 @@ import (
 
 // Configuração
 var shards = []string{"localhost:9001", "localhost:9002", "localhost:9003"}
-const coreAddr = "localhost:8082"
+const (
+	coreAddr       = "localhost:8082"
+	requestTimeout = 2 * time.Second // Timeout rigoroso para evitar travamentos
+)
 
 type AggregatedResponse struct {
 	CurrentPrice model.Quote         `json:"current_price"`
@@ -53,7 +56,10 @@ func handleClient(conn net.Conn) {
 		quote, err := getQuoteFromCore()
 		mu.Lock()
 		if err != nil {
-			resp.Errors = append(resp.Errors, "Core: "+err.Error())
+			// Falha parcial aceitável
+			errMsg := fmt.Sprintf("Core: %v", err)
+			fmt.Println("Error fetching from Core:", errMsg)
+			resp.Errors = append(resp.Errors, errMsg)
 		} else {
 			resp.CurrentPrice = quote
 		}
@@ -68,7 +74,10 @@ func handleClient(conn net.Conn) {
 			txs, err := getHistoryFromShard(addr)
 			mu.Lock()
 			if err != nil {
-				resp.Errors = append(resp.Errors, "Shard("+addr+"): "+err.Error())
+				// Falha parcial aceitável
+				errMsg := fmt.Sprintf("Shard(%s): %v", addr, err)
+				fmt.Println("Error fetching from Shard:", errMsg)
+				resp.Errors = append(resp.Errors, errMsg)
 			} else {
 				resp.History = append(resp.History, txs...)
 			}
@@ -79,21 +88,30 @@ func handleClient(conn net.Conn) {
 	// 3. Gather: Aguardar todos
 	wg.Wait()
 	
-	fmt.Printf("Scatter/Gather finished in %v\n", time.Since(start))
+	duration := time.Since(start)
+	fmt.Printf("Scatter/Gather finished in %v. Errors: %d\n", duration, len(resp.Errors))
 
 	// Enviar de volta ao cliente
-	json.NewEncoder(conn).Encode(resp)
+	if err := json.NewEncoder(conn).Encode(resp); err != nil {
+		fmt.Println("Error sending response to client:", err)
+	}
 }
 
 func getQuoteFromCore() (model.Quote, error) {
-	conn, err := net.Dial("tcp", coreAddr)
+	// Usar DialTimeout para evitar hang na conexão inicial (TCP handshake)
+	conn, err := net.DialTimeout("tcp", coreAddr, requestTimeout)
 	if err != nil {
 		return model.Quote{}, err
 	}
 	defer conn.Close()
 
+	// Definir Deadline total para a operação (escrita + leitura)
+	conn.SetDeadline(time.Now().Add(requestTimeout))
+
 	req := protocol.NewMessage(protocol.MsgRequestQuote, nil)
-	protocol.SendJSON(conn, req)
+	if err := protocol.SendJSON(conn, req); err != nil {
+		return model.Quote{}, err
+	}
 
 	var msg protocol.Message
 	if err := protocol.ReceiveJSON(conn, &msg); err != nil {
@@ -105,19 +123,27 @@ func getQuoteFromCore() (model.Quote, error) {
 	}
 
 	var quote model.Quote
-	json.Unmarshal(msg.Payload, &quote)
+	if err := json.Unmarshal(msg.Payload, &quote); err != nil {
+		return model.Quote{}, err
+	}
 	return quote, nil
 }
 
 func getHistoryFromShard(addr string) ([]model.Transaction, error) {
-	conn, err := net.Dial("tcp", addr)
+	// Usar DialTimeout
+	conn, err := net.DialTimeout("tcp", addr, requestTimeout)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
+	// Definir Deadline
+	conn.SetDeadline(time.Now().Add(requestTimeout))
+
 	req := protocol.NewMessage(protocol.MsgReqHistory, nil)
-	protocol.SendJSON(conn, req)
+	if err := protocol.SendJSON(conn, req); err != nil {
+		return nil, err
+	}
 
 	var msg protocol.Message
 	if err := protocol.ReceiveJSON(conn, &msg); err != nil {
@@ -125,6 +151,8 @@ func getHistoryFromShard(addr string) ([]model.Transaction, error) {
 	}
 
 	var txs []model.Transaction
-	json.Unmarshal(msg.Payload, &txs)
+	if err := json.Unmarshal(msg.Payload, &txs); err != nil {
+		return nil, err
+	}
 	return txs, nil
 }

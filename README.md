@@ -34,6 +34,20 @@ O sistema foi arquitetado para resolver problemas reais de engenharia de softwar
 
 ---
 
+### Topologia do Sistema
+
+A infraestrutura é composta por 7 processos distintos comunicando-se via TCP/JSON:
+
+| Serviço | Porta TCP | Função | Padrão Associado |
+| :--- | :--- | :--- | :--- |
+| **External** | `:8080` | Mock de Bolsa de Valores (instável) | Fonte de Dados |
+| **Broker** | `:8081` | Distribuição de mensagens (1:N) | **Pub/Sub** |
+| **Core** | `:8082` | Lógica de Negócio Central | **Circuit Breaker** |
+| **Shard A-C**| `:9001-03`| Armazenamento particionado | **Sharding** |
+| **Aggregator**| `:8000` | Gateway de consulta unificada | **Scatter/Gather** |
+
+---
+
 ### Pré-requisitos
 *   **Go** 1.20+
 *   **Make** (GNU Make)

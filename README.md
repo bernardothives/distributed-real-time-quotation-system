@@ -1,64 +1,117 @@
-# Sistema de Cotações em Tempo Real Distribuído
+# Distributed Real-Time Quotation System
 
-**Disciplina:** INE5645 - Programação Paralela e Distribuída  
-**Linguagem:** Go (Golang) 1.21+  
+![Go Version](https://img.shields.io/badge/Go-1.21%2B-blue)
+![Architecture](https://img.shields.io/badge/Architecture-Microservices-green)
+![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen)
+![Coverage](https://img.shields.io/badge/Tests-Passing-brightgreen)
 
----
-
-## Visão Geral
-
-Este projeto implementa uma infraestrutura de microsserviços para simular um sistema financeiro de alta disponibilidade. A solução demonstra a aplicação prática de quatro padrões fundamentais de sistemas distribuídos para resolver problemas de latência, acoplamento e tolerância a falhas.
-
-### Topologia do Sistema
-
-A infraestrutura é composta por 7 processos distintos comunicando-se via TCP/JSON:
-
-| Serviço | Porta TCP | Função | Padrão Associado |
-| :--- | :--- | :--- | :--- |
-| **External** | `:8080` | Mock de Bolsa de Valores (instável) | Fonte de Dados |
-| **Broker** | `:8081` | Distribuição de mensagens (1:N) | **Pub/Sub** |
-| **Core** | `:8082` | Lógica de Negócio Central | **Circuit Breaker** |
-| **Shard A-C**| `:9001-03`| Armazenamento particionado | **Sharding** |
-| **Aggregator**| `:8000` | Gateway de consulta unificada | **Scatter/Gather** |
+Um sistema distribuído robusto simulando uma plataforma financeira de alta frequência. Este projeto demonstra a implementação "from scratch" (sem frameworks pesados) de padrões clássicos de design distribuído, focando em resiliência, escalabilidade e desacoplamento.
 
 ---
 
-## Como Executar
+## 🏗 Arquitetura e Padrões de Design
+
+O sistema foi arquitetado para resolver problemas reais de engenharia de software distribuída:
+
+### 1. Circuit Breaker (Resiliência)
+*   **Problema:** O serviço `External` (Bolsa de Valores) simula instabilidade e latência.
+*   **Solução:** Implementação de uma máquina de estados (Closed, Open, Half-Open) no serviço `Core`.
+*   **Benefício:** Impede falhas em cascata e protege o sistema de exaustão de recursos quando dependências externas falham.
+*   **Localização:** `pkg/circuitbreaker`
+
+### 2. Publish/Subscribe (Desacoplamento)
+*   **Problema:** Múltiplos clientes precisam de cotações em tempo real sem sobrecarregar o `Core`.
+*   **Solução:** Um `Broker` TCP dedicado gerencia tópicos e assinaturas. O `Core` publica uma vez (Fan-out).
+*   **Benefício:** O `Core` não conhece os consumidores finais; alta escalabilidade de leitura.
+*   **Localização:** `cmd/broker` e `pkg/protocol`
+
+### 3. Database Sharding (Escalabilidade)
+*   **Problema:** O volume de histórico de transações cresce indefinidamente.
+*   **Solução:** Particionamento horizontal dos dados em 3 nós (`Shard A`, `Shard B`, `Shard C`).
+*   **Benefício:** Distribuição de carga de I/O e armazenamento.
+*   **Localização:** `cmd/shard`
+
+### 4. Scatter/Gather (Agregação)
+*   **Problema:** Clientes precisam de um relatório unificado (Preço Atual + Histórico Completo) vindo de fontes distintas.
+*   **Solução:** O `Aggregator` dispara requisições paralelas para o `Core` e todos os `Shards`, aguardando (`Wait`) e combinando os resultados.
+*   **Benefício:** Redução latência total (limitada pelo serviço mais lento, não pela soma).
+*   **Localização:** `cmd/aggregator`
+
+---
+
+## 🚀 Getting Started
 
 ### Pré-requisitos
-*   **Go** (versão 1.20 ou superior)
-*   **Make** (para automação de build)
-*   Sistema Operacional Linux ou macOS (devido ao uso de sinais de processo no Makefile)
+*   **Go** 1.20+
+*   **Make** (GNU Make)
+*   Ambiente Linux/Unix
 
-### 1. Inicialização (Infraestrutura)
-Compila todos os microsserviços, gera os binários na pasta `bin/` e inicia todos os serviços em background (`&`), salvando os PIDs para encerramento posterior.
-```bash
-make run-all
-```
-> *Aguarde mensagem "All services started."*
+### Execução Rápida
 
-### 2. Teste: Pub/Sub (Tempo Real)
-Inicia um cliente que se subscreve no Broker. Você verá atualizações de preço chegando via "push" assim que o Core processar cotações.
-```bash
-make test-sub
-```
+O projeto utiliza um `Makefile` para orquestrar os 7 processos distribuídos simultaneamente.
 
-### 3. Teste: Scatter/Gather (Relatório Agregado)
-Solicita um relatório completo. O Aggregator buscará o preço atual no Core e o histórico nos 3 Shards simultaneamente.
-```bash
-make test-aggregator
-```
+1. **Subir a Infraestrutura:**
+   Compila e inicia todos os serviços (External, Broker, Core, Shards, Aggregator) em background.
+   ```bash
+   make run-all
+   ```
 
-### 4. Parar o Sistema
-Encerra todos os processos (kill) e remove arquivos temporários (`.pid`).
-```bash
-make stop-all
-```
+2. **Testar Fluxo Pub/Sub (Tempo Real):**
+   Inicia um cliente assinante para visualizar o fluxo de cotações.
+   ```bash
+   make test-sub
+   ```
+
+3. **Testar Fluxo Scatter/Gather (Relatório):**
+   Solicita a agregação de dados distribuídos.
+   ```bash
+   make test-aggregator
+   ```
+
+4. **Parar Tudo:**
+   Mata os processos e limpa os arquivos `.pid`.
+   ```bash
+   make stop-all
+   ```
 
 ---
 
-## Estrutura de Diretórios
+## 🛡️ Qualidade e Testes (Novidade)
 
-*   `cmd/`: Ponto de entrada (main) de cada microsserviço.
-*   `pkg/`: Bibliotecas compartilhadas (Protocolo, Modelos, Circuit Breaker).
-*   `bin/`: Binários executáveis (ignorados pelo git).
+A robustez do sistema é garantida por uma suíte de testes automatizados cobrindo os componentes críticos.
+
+Para executar a validação completa:
+```bash
+make test
+```
+
+### Cobertura dos Testes:
+*   **Protocolo (`pkg/protocol`):** Valida a serialização/deserialização JSON e resiliência contra payloads corrompidos (Fuzzing básico).
+*   **Circuit Breaker (`pkg/circuitbreaker`):** Teste de caixa branca da máquina de estados, garantindo transições corretas entre `Closed` -> `Open` -> `Half-Open` -> `Closed` baseadas em limiares de erro e timeouts.
+*   **Aggregator Resilience (`cmd/aggregator`):** Mock servers validam se o agregador sobrevive à falha total ou parcial dos Shards (Connection Refused, Timeout).
+
+---
+
+## 📂 Estrutura do Projeto
+
+```plaintext
+/
+├── bin/                 # Binários compilados (ignorados pelo git)
+├── cmd/                 # Entrypoints dos microsserviços
+│   ├── aggregator/      # Serviço de agregação (Scatter/Gather)
+│   ├── broker/          # Servidor de Mensageria TCP
+│   ├── client/          # Cliente CLI para testes manuais
+│   ├── core/            # Regras de negócio e Circuit Breaker
+│   ├── external/        # Simulador de API externa instável
+│   └── shard/           # Nós de armazenamento (Sharding)
+├── pkg/                 # Código compartilhado
+│   ├── circuitbreaker/  # Lógica de proteção de falhas
+│   ├── model/           # Entidades de Domínio (Quote, Transaction)
+│   └── protocol/        # Protocolo de Comunicação Customizado (TCP/JSON)
+├── Makefile             # Automação de build e testes
+└── README.md            # Documentação
+```
+
+---
+**Autor:** Bernardo Thives
+**Curso:** Engenharia de Software - Sistemas Distribuídos

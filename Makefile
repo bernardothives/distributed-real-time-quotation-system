@@ -30,6 +30,9 @@ stop-all:
 	@rm *.pid 2>/dev/null || true
 	@echo "All services stopped."
 
+test:
+	go test ./... -v
+
 test-aggregator:
 	@./bin/client -mode=aggregator
 
